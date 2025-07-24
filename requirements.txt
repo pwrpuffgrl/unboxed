@@ -1,0 +1,9 @@
+# Project dependencies
+fastapi
+uvicorn
+openai
+langchain
+psycopg2-binary
+pgvector
+tiktoken
+python-dotenv
