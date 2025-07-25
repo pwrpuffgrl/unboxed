@@ -8,6 +8,7 @@ import json
 from dotenv import load_dotenv
 
 # Import our services
+from services.rag import create_rag_prompt, generate_rag_answer
 from services.file_processor import FileProcessor
 from services.db import DatabaseService
 from services.chunk import chunk_text
@@ -40,6 +41,7 @@ app.add_middleware(
 class QuestionRequest(BaseModel):
     question: str
     context_limit: Optional[int] = 5
+
 
 class QuestionResponse(BaseModel):
     answer: str
@@ -105,6 +107,11 @@ async def ask_question(request: QuestionRequest):
             limit=request.context_limit
         )
         
+        print(f"Found {len(similar_chunks)} similar chunks")
+        if similar_chunks:
+            print(f"First chunk similarity: {similar_chunks[0]['similarity']}")
+            print(f"First chunk content preview: {similar_chunks[0]['content'][:100]}")
+
         if not similar_chunks:
             return QuestionResponse(
                 answer="I don't have enough information to answer this question. Please upload some documents first.",
@@ -112,13 +119,13 @@ async def ask_question(request: QuestionRequest):
                 confidence=0.0
             )
         
-        # TODO: Implement actual RAG logic here
-        # For now, return a simple response with the most relevant chunk
+        rag_prompt = create_rag_prompt(request.question, similar_chunks)
+        answer = generate_rag_answer(rag_prompt)
         most_relevant_chunk = similar_chunks[0]
         
         return QuestionResponse(
-            answer=f"Based on the document '{most_relevant_chunk['filename']}', here's what I found: {most_relevant_chunk['content'][:200]}...",
-            sources=[f"{most_relevant_chunk['filename']} (similarity: {most_relevant_chunk['similarity']:.2f})"],
+            answer=answer,
+            sources=[f"{chunk['filename']} (similarity: {chunk['similarity']:.2f})" for chunk in similar_chunks],
             confidence=most_relevant_chunk['similarity']
         )
         

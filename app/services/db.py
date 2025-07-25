@@ -99,45 +99,39 @@ class DatabaseService:
                 conn.close()
     
     def search_similar_chunks(self, query_embedding: List[float], limit: int = 5) -> List[Dict[str, Any]]:
-        """
-        Search for similar document chunks using vector similarity
-        
-        Args:
-            query_embedding: The embedding vector of the query
-            limit: Maximum number of results to return
-            
-        Returns:
-            List of dicts with chunk information
-        """
+        """Search for document chunks similar to the query embedding"""
+        print(f"Searching with embedding length: {len(query_embedding)}")
         try:
-            conn = self.get_connection()
-            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cur.execute("""
-                SELECT 
-                    dc.id,
-                    dc.content,
-                    dc.chunk_index,
-                    f.filename,
-                    f.content_type,
-                    1 - (dc.embedding <=> %s) as similarity
-                FROM document_chunks dc
-                JOIN files f ON dc.file_id = f.id
-                ORDER BY dc.embedding <=> %s
-                LIMIT %s
-            """, (query_embedding, query_embedding, limit))
-            
-            results = cur.fetchall()
-            return [dict(row) for row in results]
-            
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT 
+                            dc.id,
+                            dc.content,
+                            dc.chunk_index,
+                            f.filename,
+                            f.content_type,
+                            1 - (dc.embedding <=> %s::vector) as similarity
+                        FROM document_chunks dc
+                        JOIN files f ON dc.file_id = f.id
+                        ORDER BY dc.embedding <=> %s::vector
+                        LIMIT %s
+                    """, (query_embedding, query_embedding, limit))
+                    
+                    results = []
+                    for row in cur.fetchall():
+                        results.append({
+                            'id': row[0],
+                            'content': row[1],
+                            'chunk_index': row[2],
+                            'filename': row[3],
+                            'content_type': row[4],
+                            'similarity': float(row[5])
+                        })
+                    return results
         except Exception as e:
-            logger.error(f"❌ Failed to search similar chunks: {e}")
+            print(f"❌ Failed to search similar chunks: {e}")
             return []
-        finally:
-            if cur:
-                cur.close()
-            if conn:
-                conn.close()
     
     def get_file_stats(self) -> Dict[str, Any]:
         """Get basic statistics about the database"""
