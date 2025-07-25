@@ -1,6 +1,9 @@
 import openai
 import os
 from dotenv import load_dotenv
+import sys
+sys.path.append('..')
+from constants import FILE_CONSTANTS, MESSAGES
 
 load_dotenv()
 
@@ -21,15 +24,15 @@ def generate_rag_answer(prompt: str) -> str:
                     "content": prompt
                 }
             ],
-            max_tokens=500,  # Limit response length
-            temperature=0.7  # Balance between creativity and accuracy
+            max_tokens=FILE_CONSTANTS["MAX_TOKENS"],  # Limit response length
+            temperature=FILE_CONSTANTS["TEMPERATURE"]  # Balance between creativity and accuracy
         )
         
         return response.choices[0].message.content.strip()
         
     except Exception as e:
         print(f"Error generating RAG answer: {e}")
-        return "Sorry, I encountered an error while generating the answer."
+        return MESSAGES["RAG_ERROR"]
 
 
 def create_rag_prompt(question: str, context_chunks: list) -> str:

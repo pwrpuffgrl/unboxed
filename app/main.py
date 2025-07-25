@@ -1,21 +1,24 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
-import uvicorn
-import os
-import json
-from dotenv import load_dotenv
+from typing import Optional
+import logging
 
-# Import our services
-from services.rag import create_rag_prompt, generate_rag_answer
-from services.file_processor import FileProcessor
+import uvicorn
+
+# Import our organized modules
+
+from models.api_models import HealthResponse, IngestResponse, QuestionRequest, QuestionResponse, StatsResponse
+from config import config
+from constants import MESSAGES, DB_CONSTANTS, FILE_CONSTANTS
+
+# Import services
 from services.db import DatabaseService
 from services.chunk import chunk_text
 from services.embedding import get_embedding, sanitize_text
+from services.file_processor import FileProcessor
+from services.rag import create_rag_prompt, generate_rag_answer
 
-# Load environment variables
-load_dotenv()
+
 
 # Initialize services
 file_processor = FileProcessor()
@@ -37,34 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pydantic models
-class QuestionRequest(BaseModel):
-    question: str
-    context_limit: Optional[int] = 5
 
-
-class QuestionResponse(BaseModel):
-    answer: str
-    sources: List[str]
-    confidence: float
-
-class HealthResponse(BaseModel):
-    status: str
-    message: str
-
-class IngestResponse(BaseModel):
-    message: str
-    filename: str
-    file_size: int
-    file_type: str
-    status: str
-    chunks_processed: int
-    word_count: int
-
-class StatsResponse(BaseModel):
-    file_count: int
-    chunk_count: int
-    total_words: int
 
 # Health check endpoint
 @app.get("/health", response_model=HealthResponse)
@@ -99,12 +75,12 @@ async def ask_question(request: QuestionRequest):
         # Get embedding for the question
         question_embedding = get_embedding(request.question)
         if not question_embedding:
-            raise HTTPException(status_code=500, detail="Failed to generate question embedding")
+            raise HTTPException(status_code=500, detail=MESSAGES["EMBEDDING_ERROR"])
         
         # Search for similar chunks
         similar_chunks = db_service.search_similar_chunks(
             question_embedding, 
-            limit=request.context_limit
+            limit=request.context_limit or DB_CONSTANTS["DEFAULT_LIMIT"]
         )
         
         print(f"Found {len(similar_chunks)} similar chunks")
@@ -114,7 +90,7 @@ async def ask_question(request: QuestionRequest):
 
         if not similar_chunks:
             return QuestionResponse(
-                answer="I don't have enough information to answer this question. Please upload some documents first.",
+                answer=MESSAGES["NO_DOCUMENTS"],
                 sources=[],
                 confidence=0.0
             )
@@ -141,20 +117,12 @@ async def ingest_document(
     """Ingest a document for RAG processing"""
     try:
         # Validate file type
-        allowed_types = [
-            "application/pdf",
-            "text/plain", 
-            "text/markdown",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "text/csv",
-            "application/json"
-        ]
+        allowed_types = config.ALLOWED_FILE_TYPES
         
         if file.content_type not in allowed_types:
             raise HTTPException(
                 status_code=400, 
-                detail=f"File type {file.content_type} not supported. Allowed types: {allowed_types}"
+                detail=MESSAGES["FILE_TYPE_NOT_SUPPORTED"].format(file_type=file.content_type, allowed_types=allowed_types)
             )
         
         # Read file content
@@ -170,7 +138,7 @@ async def ingest_document(
         if processed_file['status'] == 'error':
             raise HTTPException(
                 status_code=400, 
-                detail=f"Failed to process file: {processed_file.get('error', 'Unknown error')}"
+                detail=MESSAGES["PROCESSING_ERROR"].format(error=processed_file.get('error', 'Unknown error'))
             )
         
         # Insert file metadata into database
@@ -183,7 +151,7 @@ async def ingest_document(
         )
         
         # Chunk the extracted text
-        text_chunks = chunk_text(processed_file['text'])
+        text_chunks = chunk_text(processed_file['text'], FILE_CONSTANTS["DEFAULT_CHUNK_SIZE"])
 
         # DEBUG: Add these print statements
         print(f"Original text length: {len(processed_file['text'])}")
@@ -221,7 +189,7 @@ async def ingest_document(
         chunks_inserted = db_service.insert_document_chunks(file_id, processed_chunks)
         
         return IngestResponse(
-            message="Document uploaded and processed successfully",
+            message=MESSAGES["UPLOAD_SUCCESS"],
             filename=processed_file['filename'],
             file_size=processed_file['file_size'],
             file_type=processed_file['content_type'],
