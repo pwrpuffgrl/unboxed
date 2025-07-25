@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from services.file_processor import FileProcessor
 from services.db import DatabaseService
 from services.chunk import chunk_text
-from services.embedding import get_embedding
+from services.embedding import get_embedding, sanitize_text
 
 # Load environment variables
 load_dotenv()
@@ -177,19 +177,39 @@ async def ingest_document(
         
         # Chunk the extracted text
         text_chunks = chunk_text(processed_file['text'])
-        
+
+        # DEBUG: Add these print statements
+        print(f"Original text length: {len(processed_file['text'])}")
+        print(f"Number of chunks created: {len(text_chunks)}")
+        if text_chunks:
+            print(f"First chunk preview: {text_chunks[0][:100]}")
+        else:
+            print("No chunks created!")
+
         # Process chunks and create embeddings
         processed_chunks = []
+        print(f"Starting to process {len(text_chunks)} chunks...")
+
         for i, chunk in enumerate(text_chunks):
+            print(f"Processing chunk {i+1}/{len(text_chunks)}")
             if chunk.strip():  # Skip empty chunks
+                print(f"  Chunk {i+1} has content, generating embedding...")
                 embedding = get_embedding(chunk)
                 if embedding:
+                    print(f"  Chunk {i+1} embedding generated successfully")
+                    sanatized_content = sanitize_text(chunk)
                     processed_chunks.append({
-                        'content': chunk,
+                        'content': sanatized_content,
                         'embedding': embedding,
                         'index': i
                     })
-        
+                else:
+                    print(f"  Chunk {i+1} embedding generation failed!")
+            else:
+                print(f"  Chunk {i+1} is empty, skipping")
+
+        print(f"Total processed chunks: {len(processed_chunks)}")
+
         # Insert chunks into database
         chunks_inserted = db_service.insert_document_chunks(file_id, processed_chunks)
         
