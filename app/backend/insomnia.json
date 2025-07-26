@@ -1,0 +1,207 @@
+{
+    "_type": "export",
+    "__export_format": 4,
+    "__export_date": "2024-12-19T10:00:00.000Z",
+    "__export_source": "insomnia.desktop.app:v2023.5.8",
+    "resources": [
+        {
+            "_id": "req_root",
+            "parentId": "wrk_unboxed_api",
+            "modified": 1702992000000,
+            "created": 1702992000000,
+            "url": "{{ _.base_url }}/",
+            "name": "Root",
+            "description": "Get API information and available endpoints",
+            "method": "GET",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {},
+            "metaSortKey": -1702992000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_health",
+            "parentId": "wrk_unboxed_api",
+            "modified": 1702992000000,
+            "created": 1702992000000,
+            "url": "{{ _.base_url }}/health",
+            "name": "Health Check",
+            "description": "Check if the API is running and healthy",
+            "method": "GET",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {},
+            "metaSortKey": -1702992000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_docs",
+            "parentId": "wrk_unboxed_api",
+            "modified": 1702992000000,
+            "created": 1702992000000,
+            "url": "{{ _.base_url }}/docs",
+            "name": "API Documentation",
+            "description": "Get API documentation information",
+            "method": "GET",
+            "body": {},
+            "parameters": [],
+            "headers": [],
+            "authentication": {},
+            "metaSortKey": -1702992000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_ask_question",
+            "parentId": "wrk_unboxed_api",
+            "modified": 1702992000000,
+            "created": 1702992000000,
+            "url": "{{ _.base_url }}/ask",
+            "name": "Ask Question",
+            "description": "Ask a question and get an answer based on ingested documents",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n  \"question\": \"What is the main topic of the documents?\",\n  \"context_limit\": 5\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1702992000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_ask_simple",
+            "parentId": "wrk_unboxed_api",
+            "modified": 1702992000000,
+            "created": 1702992000000,
+            "url": "{{ _.base_url }}/ask",
+            "name": "Ask Question (Simple)",
+            "description": "Ask a simple question without context limit",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n  \"question\": \"Hello, how are you?\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1702992000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_ingest_file",
+            "parentId": "wrk_unboxed_api",
+            "modified": 1702992000000,
+            "created": 1702992000000,
+            "url": "{{ _.base_url }}/ingest",
+            "name": "Ingest Document",
+            "description": "Upload and ingest a document for RAG processing",
+            "method": "POST",
+            "body": {
+                "mimeType": "multipart/form-data",
+                "params": [
+                    {
+                        "name": "file",
+                        "type": "file",
+                        "fileName": "",
+                        "description": "Document file to ingest (PDF, TXT, DOC, etc.)"
+                    },
+                    {
+                        "name": "metadata",
+                        "type": "text",
+                        "value": "{\"source\": \"manual_upload\", \"category\": \"documentation\"}",
+                        "description": "Optional metadata as JSON string"
+                    }
+                ]
+            },
+            "parameters": [],
+            "headers": [],
+            "authentication": {},
+            "metaSortKey": -1702992000000,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "env_development",
+            "parentId": "wrk_unboxed_api",
+            "modified": 1702992000000,
+            "created": 1702992000000,
+            "name": "Development",
+            "data": {
+                "base_url": "http://localhost:8000"
+            },
+            "dataPropertyOrder": {
+                "&": [
+                    "base_url"
+                ]
+            },
+            "color": null,
+            "isPrivate": false,
+            "metaSortKey": 1702992000000,
+            "_type": "environment"
+        },
+        {
+            "_id": "wrk_unboxed_api",
+            "parentId": null,
+            "modified": 1702992000000,
+            "created": 1702992000000,
+            "name": "Unboxed API",
+            "description": "API collection for the Unboxed RAG application",
+            "scope": "collection",
+            "_type": "workspace"
+        }
+    ]
+}
