@@ -52,7 +52,7 @@ cd unboxed
 
 ```bash
 # Navigate to backend
-cd app/backend
+cd backend
 
 # Create virtual environment
 python3 -m venv venv
@@ -76,7 +76,7 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ```bash
 # Navigate to frontend
-cd app/frontend
+cd frontend
 
 # Install dependencies
 npm install
@@ -98,7 +98,7 @@ npm run dev
 ### Frontend (Next.js + TypeScript)
 
 ```
-app/frontend/
+frontend/
 ├── src/
 │   ├── app/           # Next.js App Router
 │   ├── components/    # Reusable UI components
@@ -117,7 +117,7 @@ app/frontend/
 ### Backend (FastAPI + PostgreSQL)
 
 ```
-app/backend/
+backend/
 ├── services/          # Business logic
 ├── models/           # Pydantic models
 ├── main.py           # FastAPI application
@@ -198,7 +198,7 @@ curl -X POST http://localhost:8000/ask \
 **Frontend:**
 
 ```bash
-cd app/frontend
+cd frontend
 npm run dev
 # Open http://localhost:3000 in browser
 ```
@@ -228,7 +228,6 @@ npm run dev
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
 
 ---
 
