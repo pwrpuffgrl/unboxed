@@ -1,9 +1,9 @@
-import Header from '../components/Header';
-import FileUpload from '../components/FileUpload';
-import FileList from '../components/FileList';
-import ChatHistory from '../components/ChatHistory';
-import ChatInput from '../components/ChatInput';
-import MobileSidebar from '../components/MobileSidebar';
+import Header from './components/Header';
+import FileUpload from './components/FileUpload';
+import FileList from './components/FileList';
+import ChatHistory from './components/ChatHistory';
+import ChatInput from './components/ChatInput';
+import MobileSidebar from './components/MobileSidebar';
 
 export default function Home() {
   return (
