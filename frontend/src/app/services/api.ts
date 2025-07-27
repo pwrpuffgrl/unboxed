@@ -11,10 +11,23 @@ export interface IngestResponse {
   word_count: number;
 }
 
+export interface FileInfo {
+  id: number;
+  filename: string;
+  content_type: string;
+  file_size: number;
+  word_count: number;
+  created_at: string;
+}
+
 export interface StatsResponse {
   file_count: number;
   chunk_count: number;
   total_words: number;
+}
+
+export interface FilesResponse {
+  files: FileInfo[];
 }
 
 export interface HealthResponse {
@@ -60,6 +73,16 @@ class ApiService {
 
     if (!response.ok) {
       throw new Error("Failed to fetch stats");
+    }
+
+    return response.json();
+  }
+
+  async getFiles(): Promise<FilesResponse> {
+    const response = await fetch(`${this.baseUrl}/files`);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch files");
     }
 
     return response.json();

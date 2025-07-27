@@ -1,11 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode } from 'react';
-
-interface FileContextType {
-  refreshTrigger: number;
-  triggerRefresh: () => void;
-}
+import { FileContextType } from '../types';
 
 const FileContext = createContext<FileContextType | undefined>(undefined);
 

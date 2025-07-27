@@ -3,13 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { apiService } from '../services/api';
 import { useFileContext } from '../contexts/FileContext';
-
-interface UploadState {
-  isUploading: boolean;
-  progress: number;
-  error: string | null;
-  success: string | null;
-}
+import { UploadState } from '../types';
 
 export default function FileUpload() {
   const { triggerRefresh } = useFileContext();
@@ -131,7 +125,7 @@ export default function FileUpload() {
   return (
     <div className="space-y-4">
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200 ${
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 ${
           isDragOver
             ? 'border-cyan-500 bg-cyan-500/10'
             : uploadState.isUploading
@@ -142,8 +136,8 @@ export default function FileUpload() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-        <div className="text-gray-400 mb-4">
-          <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-gray-400 mb-3">
+          <svg className="w-8 h-8 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
         </div>
