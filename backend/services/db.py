@@ -1,6 +1,5 @@
 # services/db.py
 import psycopg2
-import psycopg2.extras
 import os
 import logging
 from typing import List, Dict, Any, Optional
@@ -28,6 +27,8 @@ class DatabaseService:
         Returns:
             int: The file ID that was inserted
         """
+        conn = None
+        cur = None
         try:
             conn = self.get_connection()
             cur = conn.cursor()
@@ -65,6 +66,8 @@ class DatabaseService:
         Returns:
             int: Number of chunks inserted
         """
+        conn = None
+        cur = None
         try:
             conn = self.get_connection()
             cur = conn.cursor()
@@ -135,6 +138,8 @@ class DatabaseService:
     
     def get_file_stats(self) -> Dict[str, Any]:
         """Get basic statistics about the database"""
+        conn = None
+        cur = None
         try:
             conn = self.get_connection()
             cur = conn.cursor()
@@ -160,6 +165,42 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"❌ Failed to get file stats: {e}")
             return {'file_count': 0, 'chunk_count': 0, 'total_words': 0}
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+
+    def get_all_files(self) -> List[Dict[str, Any]]:
+        """Get all files with their metadata"""
+        conn = None
+        cur = None
+        try:
+            conn = self.get_connection()
+            cur = conn.cursor()
+            
+            cur.execute("""
+                SELECT id, filename, content_type, file_size, word_count, created_at
+                FROM files
+                ORDER BY created_at DESC
+            """)
+            
+            files = []
+            for row in cur.fetchall():
+                files.append({
+                    'id': row[0],
+                    'filename': row[1],
+                    'content_type': row[2],
+                    'file_size': row[3],
+                    'word_count': row[4],
+                    'created_at': row[5].isoformat() if row[5] else None
+                })
+            
+            return files
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to get all files: {e}")
+            return []
         finally:
             if cur:
                 cur.close()

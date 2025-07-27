@@ -7,7 +7,7 @@ import uvicorn
 
 # Import our organized modules
 
-from models.api_models import HealthResponse, IngestResponse, QuestionRequest, QuestionResponse, StatsResponse
+from models.api_models import HealthResponse, IngestResponse, QuestionRequest, QuestionResponse, StatsResponse, FilesResponse
 from config import config
 from constants import MESSAGES, DB_CONSTANTS, FILE_CONSTANTS
 
@@ -212,6 +212,16 @@ async def get_stats():
         return StatsResponse(**stats)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
+
+# Files endpoint
+@app.get("/files", response_model=FilesResponse)
+async def get_files():
+    """Get all uploaded files"""
+    try:
+        files = db_service.get_all_files()
+        return FilesResponse(files=files)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting files: {str(e)}")
 
 # API documentation endpoint
 @app.get("/docs")

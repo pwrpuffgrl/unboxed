@@ -25,7 +25,18 @@ class IngestResponse(BaseModel):
     chunks_processed: int
     word_count: int
 
+class FileInfo(BaseModel):
+    id: int
+    filename: str
+    content_type: str
+    file_size: int
+    word_count: int
+    created_at: str
+
 class StatsResponse(BaseModel):
     file_count: int
     chunk_count: int
     total_words: int
+
+class FilesResponse(BaseModel):
+    files: List[FileInfo]
