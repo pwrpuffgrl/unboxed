@@ -35,6 +35,17 @@ export interface HealthResponse {
   message: string;
 }
 
+export interface QuestionRequest {
+  question: string;
+  context_limit: number;
+}
+
+export interface QuestionResponse {
+  answer: string;
+  sources: string[];
+  confidence: number;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -93,6 +104,25 @@ class ApiService {
 
     if (!response.ok) {
       throw new Error("Health check failed");
+    }
+
+    return response.json();
+  }
+
+  async askQuestion(request: QuestionRequest): Promise<QuestionResponse> {
+    const response = await fetch(`${this.baseUrl}/ask`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: "Failed to ask question" }));
+      throw new Error(errorData.detail || "Failed to ask question");
     }
 
     return response.json();

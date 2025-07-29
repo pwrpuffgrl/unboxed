@@ -4,6 +4,7 @@ import FileList from './components/FileList';
 import ChatHistory from './components/ChatHistory';
 import ChatInput from './components/ChatInput';
 import MobileSidebar from './components/MobileSidebar';
+import DebugStore from './components/DebugStore';
 import { FileProvider } from './contexts/FileContext';
 
 export default function Home() {
@@ -31,6 +32,9 @@ export default function Home() {
 
         {/* Mobile components */}
         <MobileSidebar />
+        
+        {/* Debug component (development only) */}
+        <DebugStore />
       </div>
     </FileProvider>
   );
