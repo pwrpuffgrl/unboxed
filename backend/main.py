@@ -141,12 +141,13 @@ async def ingest_document(
                 detail=MESSAGES["PROCESSING_ERROR"].format(error=processed_file.get('error', 'Unknown error'))
             )
         
-        # Insert file metadata into database
+        # Insert file metadata and original file content into database
         file_id = db_service.insert_file_metadata(
             filename=processed_file['filename'],
             content_type=processed_file['content_type'],
             file_size=processed_file['file_size'],
             word_count=processed_file['word_count'],
+            original_file_bytes=file_content,  # Store the original file
             metadata=metadata
         )
         
@@ -222,6 +223,48 @@ async def get_files():
         return FilesResponse(files=files)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting files: {str(e)}")
+
+# Document content endpoint
+@app.get("/files/{file_id}/content")
+async def get_file_content(file_id: int):
+    """Get the content of a specific file"""
+    try:
+        content = db_service.get_file_content(file_id)
+        if not content:
+            raise HTTPException(status_code=404, detail="File not found or no content available")
+        return {"content": content}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting file content: {str(e)}")
+
+# Original file endpoint
+@app.get("/files/{file_id}/download")
+async def download_file(file_id: int):
+    """Download the original file"""
+    try:
+        file_info = db_service.get_file_info(file_id)
+        if not file_info:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        # Get the original file content
+        original_file_bytes = db_service.get_original_file(file_id)
+        if not original_file_bytes:
+            raise HTTPException(status_code=404, detail="Original file not found")
+        
+        from fastapi.responses import Response
+        return Response(
+            content=original_file_bytes,
+            media_type=file_info['content_type'],
+            headers={
+                "Content-Disposition": f"inline; filename={file_info['filename']}",
+                "Content-Length": str(len(original_file_bytes))
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading file: {str(e)}")
 
 # API documentation endpoint
 @app.get("/docs")

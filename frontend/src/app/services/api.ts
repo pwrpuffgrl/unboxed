@@ -99,6 +99,26 @@ class ApiService {
     return response.json();
   }
 
+  async getFileContent(fileId: number): Promise<{ content: string }> {
+    const response = await fetch(`${this.baseUrl}/files/${fileId}/content`);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch file content");
+    }
+
+    return response.json();
+  }
+
+  async getFileBlob(fileId: number): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/files/${fileId}/download`);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch file");
+    }
+
+    return response.blob();
+  }
+
   async healthCheck(): Promise<HealthResponse> {
     const response = await fetch(`${this.baseUrl}/health`);
 

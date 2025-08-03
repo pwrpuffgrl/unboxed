@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { useFileContext } from '../contexts/FileContext';
 import { FileGridState } from '../types';
+import DocumentViewer from './DocumentViewer';
 
 export default function FileGrid() {
   const { refreshTrigger } = useFileContext();
@@ -12,6 +13,11 @@ export default function FileGrid() {
     loading: true,
     error: null,
   });
+  const [selectedFile, setSelectedFile] = useState<{
+    id: number;
+    filename: string;
+    contentType: string;
+  } | null>(null);
 
   const fetchFiles = async () => {
     try {
@@ -141,7 +147,15 @@ export default function FileGrid() {
         <div className="overflow-y-auto h-80 pb-4">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3">
             {state.files.map((file) => (
-            <div key={file.id} className="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors cursor-pointer">
+            <div 
+              key={file.id} 
+              className="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors cursor-pointer"
+              onClick={() => setSelectedFile({
+                id: file.id,
+                filename: file.filename,
+                contentType: file.content_type
+              })}
+            >
               <div className="flex items-center space-x-3 mb-3">
                 {getFileIcon(file.content_type)}
                 <div className="text-[10px] text-gray-400">
@@ -167,6 +181,16 @@ export default function FileGrid() {
           </div>
           <div className="h-8"></div>
         </div>
+      )}
+      
+      {/* Document Viewer Modal */}
+      {selectedFile && (
+        <DocumentViewer
+          fileId={selectedFile.id}
+          filename={selectedFile.filename}
+          contentType={selectedFile.contentType}
+          onClose={() => setSelectedFile(null)}
+        />
       )}
     </div>
   );

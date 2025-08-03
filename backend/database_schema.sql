@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS files (
     content_type VARCHAR(100) NOT NULL,
     file_size INTEGER NOT NULL,
     word_count INTEGER DEFAULT 0,
+    original_file BYTEA, -- Store the original file as binary data
     metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
