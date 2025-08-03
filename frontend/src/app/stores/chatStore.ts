@@ -9,6 +9,7 @@ export interface ChatMessage {
   timestamp: Date;
   sources?: string[];
   confidence?: number;
+  anonymized_content?: string; // Debug: original AI response before deanonymization
 }
 
 interface ChatStore {
@@ -66,6 +67,7 @@ export const useChatStore = create<ChatStore>()(
             timestamp: new Date(),
             sources: response.sources,
             confidence: response.confidence,
+            anonymized_content: response.anonymized_answer,
           };
 
           addMessage(assistantMessage);

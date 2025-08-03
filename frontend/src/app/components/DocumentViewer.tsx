@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiService } from '../services/api';
 import { DocumentViewerProps, DocumentViewerState } from '../types';
+import Image from 'next/image';
 
 export default function DocumentViewer({ fileId, filename, contentType, onClose }: DocumentViewerProps) {
   const [state, setState] = useState<DocumentViewerState>({
@@ -11,6 +12,7 @@ export default function DocumentViewer({ fileId, filename, contentType, onClose 
     loading: true,
     error: null,
   });
+  const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -19,14 +21,27 @@ export default function DocumentViewer({ fileId, filename, contentType, onClose 
         
         // Try to get original file blob first for better display
         try {
+          console.log(`Attempting to load file blob for file ID: ${fileId}`);
           const blob = await apiService.getFileBlob(fileId);
           const blobUrl = URL.createObjectURL(blob);
+          console.log(`Successfully created blob URL for file ${fileId}:`, blobUrl);
+          blobUrlRef.current = blobUrl;
           setState({ content: null, blobUrl, loading: false, error: null });
         } catch (blobError) {
           console.warn('Failed to load file blob, falling back to text content:', blobError);
           // Fallback to text content if blob fails
-          const response = await apiService.getFileContent(fileId);
-          setState({ content: response.content, blobUrl: null, loading: false, error: null });
+          try {
+            const response = await apiService.getFileContent(fileId);
+            setState({ content: response.content, blobUrl: null, loading: false, error: null });
+          } catch (textError) {
+            console.error('Both blob and text content failed:', textError);
+            setState({
+              content: null,
+              blobUrl: null,
+              loading: false,
+              error: `Failed to load document: ${blobError instanceof Error ? blobError.message : 'Unknown error'}`,
+            });
+          }
         }
       } catch (error) {
         console.error('Failed to load document content:', error);
@@ -43,8 +58,9 @@ export default function DocumentViewer({ fileId, filename, contentType, onClose 
 
     // Cleanup blob URL on unmount
     return () => {
-      if (state.blobUrl) {
-        URL.revokeObjectURL(state.blobUrl);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
       }
     };
   }, [fileId]);
@@ -199,7 +215,7 @@ export default function DocumentViewer({ fileId, filename, contentType, onClose 
                   style={{ minHeight: '80vh' }}
                 />
               ) : contentType.startsWith('image/') ? (
-                <img
+                <Image
                   src={state.blobUrl}
                   alt={filename}
                   className="w-full h-full object-contain"

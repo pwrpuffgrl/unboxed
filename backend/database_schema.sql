@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS files (
     file_size INTEGER NOT NULL,
     word_count INTEGER DEFAULT 0,
     original_file BYTEA, -- Store the original file as binary data
+    anonymized BOOLEAN DEFAULT FALSE,
+    anonymization_mapping JSONB, -- Store the mapping of original values to aliases
     metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

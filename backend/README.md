@@ -16,6 +16,10 @@ Ask questions in natural language, get accurate answers grounded in your actual 
 - 🧩 Modular Python backend (FastAPI)
 - 🌐 Optional UI or API-first usage
 - 🧪 Prompt evaluation (Langfuse/promptfoo ready)
+- 🔒 **Privacy Protection**: Advanced spaCy-based anonymization system
+- 🛡️ **Two-Way Anonymization**: Questions and answers are anonymized/deanonymized
+- 📋 **File-Specific Privacy**: Choose privacy mode per document during upload
+- 🔍 **Debug Mode**: Toggle to see anonymized AI responses for transparency
 
 ---
 
@@ -37,6 +41,7 @@ Ask questions in natural language, get accurate answers grounded in your actual 
 - Python 3.8+
 - PostgreSQL with pgvector extension
 - OpenAI API key
+- spaCy with English language model
 
 ### Installation
 
@@ -48,6 +53,9 @@ cd unboxed
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
+
+# Install spaCy and language model
+python -m spacy download en_core_web_sm
 ```
 
 2. **Database setup:**
@@ -75,28 +83,32 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ### API Usage
 
-**Upload a document:**
+**Upload a document with privacy mode:**
 
 ```bash
 curl -X POST http://localhost:8000/ingest \
   -F "file=@your_document.pdf" \
+  -F "anonymize=true" \
   -F "metadata={\"source\": \"manual\"}"
 ```
 
-**Ask a question:**
+**Ask a question (automatically anonymized):**
 
 ```bash
 curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "What is this document about?"}'
+  -d '{"question": "What did John work on?"}'
 ```
 
 ## �� API Reference
 
 ### Endpoints
 
-- `POST /ingest` - Upload and process documents
-- `POST /ask` - Ask questions using RAG
+- `POST /ingest` - Upload and process documents (with privacy mode)
+- `POST /ask` - Ask questions using RAG (with anonymization)
+- `GET /files` - List all uploaded files
+- `DELETE /files/{id}` - Delete file and associated data
+- `GET /files/{id}/download` - Download original file
 - `GET /health` - Health check
 - `GET /stats` - Database statistics
 - `GET /docs` - Interactive API documentation
@@ -107,16 +119,18 @@ curl -X POST http://localhost:8000/ask \
 
 ## ��️ Architecture
 
-**RAG Pipeline:**
+**RAG Pipeline with Privacy:**
 
 1. **Document Ingestion** - Upload → Extract → Chunk → Embed → Store
-2. **Question Processing** - Question → Embedding → Similarity Search
-3. **Answer Generation** - Context + Question → LLM → Answer
+2. **Privacy Processing** - Anonymize sensitive data → Store mappings
+3. **Question Processing** - Question → Anonymize → Embedding → Similarity Search
+4. **Answer Generation** - Context + Question → LLM → Deanonymize → Answer
 
 **Tech Stack:**
 
 - **Backend:** FastAPI + PostgreSQL + pgvector
 - **AI:** OpenAI GPT-3.5 + text-embedding-ada-002
+- **Privacy:** spaCy NER + consistent anonymization
 - **File Processing:** PyPDF2, text extraction
 - **Vector Search:** pgvector with cosine similarity
 
@@ -135,7 +149,6 @@ unboxed/
 ├── setup_database.py # Database setup
 └── requirements.txt # Dependencies
 
-
 ### Environment Variables
 
 | Variable         | Description                        | Required |
@@ -153,15 +166,16 @@ unboxed/
 # Health check
 curl http://localhost:8000/health
 
-# Upload test file
+# Upload test file with privacy mode
 curl -X POST http://localhost:8000/ingest \
   -F "file=@test.txt" \
+  -F "anonymize=true" \
   -F "metadata={\"test\": true}"
 
-# Ask question
+# Ask question (automatically anonymized)
 curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "What is this about?"}'
+  -d '{"question": "What did John work on?"}'
 ```
 
 ## 🤝 Contributing

@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { apiService } from '../services/api';
 import { useFileContext } from '../contexts/FileContext';
 import { UploadState } from '../types';
+import PrivacyPrompt from './PrivacyPrompt';
 
 export default function FileUpload() {
   const { triggerRefresh } = useFileContext();
@@ -14,19 +15,21 @@ export default function FileUpload() {
     success: null,
   });
   const [isDragOver, setIsDragOver] = useState(false);
+  const [privacyPromptFile, setPrivacyPromptFile] = useState<File | null>(null);
+  const [isPrivacyPromptOpen, setIsPrivacyPromptOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const allowedFileTypes = [
-    'application/pdf',
-    'text/plain',
-    'text/markdown',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'text/csv',
-    'application/json'
-  ];
-
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
+    const allowedFileTypes = [
+      'application/pdf',
+      'text/plain',
+      'text/markdown',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/csv',
+      'application/json'
+    ];
+    
     if (!allowedFileTypes.includes(file.type)) {
       return `File type ${file.type} is not supported. Please upload PDF, TXT, MD, CSV, or JSON files.`;
     }
@@ -37,14 +40,25 @@ export default function FileUpload() {
     }
     
     return null;
-  };
+  }, []);
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     const validationError = validateFile(file);
     if (validationError) {
       setUploadState(prev => ({ ...prev, error: validationError }));
       return;
     }
+
+    // Show privacy prompt for file-specific privacy mode
+    setPrivacyPromptFile(file);
+    setIsPrivacyPromptOpen(true);
+  }, [validateFile]);
+
+  const handlePrivacyPromptConfirm = async (anonymize: boolean) => {
+    if (!privacyPromptFile) return;
+
+    setIsPrivacyPromptOpen(false);
+    setPrivacyPromptFile(null);
 
     setUploadState({
       isUploading: true,
@@ -62,15 +76,19 @@ export default function FileUpload() {
         }));
       }, 200);
 
-      const response = await apiService.uploadFile(file);
+      const response = await apiService.uploadFile(privacyPromptFile, undefined, anonymize);
       
       clearInterval(progressInterval);
       
+      const successMessage = anonymize && response.anonymization_summary
+        ? `Successfully uploaded ${response.filename}! Processed ${response.chunks_processed} chunks. 🔒 Privacy mode: ${Object.entries(response.anonymization_summary).map(([type, count]) => `${count} ${type.toLowerCase()}`).join(', ')} anonymized.`
+        : `Successfully uploaded ${response.filename}! Processed ${response.chunks_processed} chunks.`;
+
       setUploadState({
         isUploading: false,
         progress: 100,
         error: null,
-        success: `Successfully uploaded ${response.filename}! Processed ${response.chunks_processed} chunks.`,
+        success: successMessage,
       });
 
       // Trigger refresh of file list
@@ -91,15 +109,20 @@ export default function FileUpload() {
     }
   };
 
+  const handlePrivacyPromptClose = () => {
+    setIsPrivacyPromptOpen(false);
+    setPrivacyPromptFile(null);
+  };
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      handleFileUpload(files[0]);
+      handleFileSelect(files[0]);
     }
-  }, []);
+  }, [handleFileSelect]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -111,10 +134,10 @@ export default function FileUpload() {
     setIsDragOver(false);
   }, []);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFileUpload(files[0]);
+      handleFileSelect(files[0]);
     }
   };
 
@@ -164,6 +187,7 @@ export default function FileUpload() {
               Browse Files
             </button>
             <p className="text-gray-500 text-sm mt-2">Supports PDF, TXT, MD, CSV, JSON (Max 10MB)</p>
+            <p className="text-gray-400 text-xs mt-1">🔒 Privacy mode can be enabled per file during upload</p>
           </>
         )}
       </div>
@@ -173,9 +197,19 @@ export default function FileUpload() {
         ref={fileInputRef}
         type="file"
         accept=".pdf,.txt,.md,.csv,.json,.doc,.docx"
-        onChange={handleFileSelect}
+        onChange={handleFileInputChange}
         className="hidden"
       />
+
+      {/* Privacy Prompt Modal */}
+      {privacyPromptFile && (
+        <PrivacyPrompt
+          file={privacyPromptFile}
+          isOpen={isPrivacyPromptOpen}
+          onClose={handlePrivacyPromptClose}
+          onConfirm={handlePrivacyPromptConfirm}
+        />
+      )}
 
       {/* Error message */}
       {uploadState.error && (

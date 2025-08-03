@@ -33,16 +33,22 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Features
 
 - **File Upload**: Drag and drop or browse to upload documents (PDF, TXT, MD, CSV, JSON)
-- **File Management**: View uploaded files and processing statistics
+- **Privacy Mode**: Choose to anonymize sensitive data during upload
+- **File Management**: View uploaded files, processing statistics, and privacy status
 - **Chat Interface**: Ask questions about your uploaded documents
+- **Debug Mode**: Toggle to see anonymized AI responses for transparency
+- **Document Viewer**: View original files in their native format
+- **File Deletion**: Remove files and associated data from the system
 - **Responsive Design**: Works on desktop and mobile devices
 
 ## Backend Integration
 
 The frontend communicates with the backend API for:
 
-- File upload and processing
-- Document statistics
-- Chat functionality (coming soon)
+- File upload and processing (with privacy mode)
+- Document statistics and privacy status
+- Chat functionality with anonymization
+- File management and deletion
+- Document viewing and download
 
 Make sure your backend is running and accessible at the configured API URL.

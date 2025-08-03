@@ -9,6 +9,8 @@ export interface IngestResponse {
   status: string;
   chunks_processed: number;
   word_count: number;
+  anonymized: boolean;
+  anonymization_summary?: Record<string, number>;
 }
 
 export interface FileInfo {
@@ -17,6 +19,7 @@ export interface FileInfo {
   content_type: string;
   file_size: number;
   word_count: number;
+  anonymized: boolean;
   created_at: string;
 }
 
@@ -44,6 +47,7 @@ export interface QuestionResponse {
   answer: string;
   sources: string[];
   confidence: number;
+  anonymized_answer?: string; // Debug: original AI response before deanonymization
 }
 
 class ApiService {
@@ -55,10 +59,12 @@ class ApiService {
 
   async uploadFile(
     file: File,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    anonymize: boolean = false
   ): Promise<IngestResponse> {
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("anonymize", anonymize.toString());
 
     if (metadata) {
       formData.append("metadata", JSON.stringify(metadata));
@@ -113,10 +119,40 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}/files/${fileId}/download`);
 
     if (!response.ok) {
-      throw new Error("Failed to fetch file");
+      const errorText = await response.text();
+      console.error(
+        `Failed to fetch file ${fileId}:`,
+        response.status,
+        errorText
+      );
+      throw new Error(`Failed to fetch file: ${response.status} ${errorText}`);
     }
 
-    return response.blob();
+    const blob = await response.blob();
+    if (blob.size === 0) {
+      console.error(`File ${fileId} returned empty blob`);
+      throw new Error("File is empty");
+    }
+
+    console.log(
+      `Successfully fetched file ${fileId}, size: ${blob.size} bytes`
+    );
+    return blob;
+  }
+
+  async deleteFile(fileId: number): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseUrl}/files/${fileId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: "Failed to delete file" }));
+      throw new Error(errorData.detail || "Failed to delete file");
+    }
+
+    return response.json();
   }
 
   async healthCheck(): Promise<HealthResponse> {

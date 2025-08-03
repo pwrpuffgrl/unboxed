@@ -1,0 +1,15 @@
+
+Dear John Smith,
+
+Thank you for your application. Here are your details:
+- Email: john.smith@example.com
+- Phone: +1-555-123-4567
+- Address: 123 Main Street, New York, NY 10001
+- SSN: 123-45-6789
+
+Please contact us at hr@company.com if you have any questions.
+
+Best regards,
+Sarah Johnson
+HR Manager
+sarah.johnson@company.com
