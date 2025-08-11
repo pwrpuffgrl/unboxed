@@ -48,7 +48,7 @@ Ask questions in natural language, get accurate answers grounded in your actual 
 1. **Clone and setup:**
 
 ```bash
-git clone <your-repo>
+git clone https://github.com/pwrpuffgrl/unboxed.git
 cd unboxed
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate

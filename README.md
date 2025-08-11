@@ -54,7 +54,7 @@ Ask questions in natural language, get accurate answers grounded in your actual 
 1. **Clone the repository:**
 
 ```bash
-git clone <your-repo>
+git clone https://github.com/pwrpuffgrl/unboxed.git
 cd unboxed
 ```
 
