@@ -410,28 +410,3 @@ class DatabaseService:
                 cur.close()
             if conn:
                 conn.close()
-
-# Legacy function for backward compatibility
-def insert_document(content: str, embedding: list[float]):
-    """Legacy function - use DatabaseService.insert_document_chunks instead"""
-    logger.warning("⚠️ Using legacy insert_document function. Consider using DatabaseService instead.")
-    try:
-        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
-        cur = conn.cursor()
-
-        cur.execute(
-            "INSERT INTO documents (content, embedding) VALUES (%s, %s)",
-            (content, embedding)
-        )
-        conn.commit()
-        logger.info("✅ Inserted document successfully")
-
-    except Exception as e:
-        logger.error(f"❌ Failed to insert document: {e}")
-
-    finally:
-        try:
-            cur.close()
-            conn.close()
-        except Exception as close_err:
-            logger.warning(f"⚠️ Problem closing connection: {close_err}") 
