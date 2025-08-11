@@ -1,7 +1,4 @@
-interface LogoProps {
-  size?: 'sm' | 'md' | 'lg';
-  showText?: boolean;
-}
+import { LogoProps } from '../types';
 
 export default function Logo({ size = 'md', showText = true }: LogoProps) {
   const sizeClasses = {

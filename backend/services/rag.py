@@ -40,13 +40,17 @@ def create_rag_prompt(question: str, context_chunks: list) -> str:
     # Combine all context chunks into one context string
     context = "\n\n".join([chunk['content'] for chunk in context_chunks])
     
-    prompt = f"""Based on the following context, please answer the question. If the answer cannot be found in the context, say "I don't have enough information to answer this question."
+    prompt = f"""You are a helpful assistant that answers questions based on the provided context. Use the context below to answer the question. 
+
+IMPORTANT: The context may contain anonymized placeholders in the format [TYPE_hash] (e.g., [NAME_abc123], [PERCENT_def456], [EMAIL_ghi789]). When you see these placeholders, assume that specific, relevant content was provided in the original text. You can reference these placeholders in your answer - they will be automatically converted to the actual values for the user.
+
+If the context contains relevant information, provide a comprehensive answer. Only say "I don't have enough information" if the context truly doesn't contain any relevant information about the question.
 
 Context:
 {context}
 
 Question: {question}
 
-Answer:"""
+Please provide a detailed answer based on the context:"""
     
     return prompt

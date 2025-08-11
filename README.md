@@ -15,6 +15,15 @@ Ask questions in natural language, get accurate answers grounded in your actual 
 - **RAG Pipeline**: Document embedding + semantic search + LLM generation
 - **Context-Aware**: Answers based on your actual documents
 - **Multi-format Support**: PDF, TXT, MD, CSV, JSON files
+- **Privacy Protection**: Advanced anonymization system to protect sensitive data
+
+### 🔒 Privacy & Security
+
+- **spaCy-based Anonymization**: Advanced NER for accurate entity detection
+- **Two-Way Anonymization**: Questions and answers are anonymized/deanonymized
+- **File-Specific Privacy**: Choose privacy mode per document during upload
+- **Debug Mode**: Toggle to see anonymized AI responses for transparency
+- **Sensitive Data Protection**: Names, emails, phone numbers, percentages, and more
 
 ### 🎨 Modern UI/UX
 
@@ -29,6 +38,7 @@ Ask questions in natural language, get accurate answers grounded in your actual 
 - **PostgreSQL + pgvector**: Scalable vector database for embeddings
 - **Modular Architecture**: Clean separation of concerns
 - **RESTful API**: Easy integration and testing
+- **Privacy Engine**: spaCy-based anonymization with consistent aliases
 
 ---
 
@@ -36,7 +46,7 @@ Ask questions in natural language, get accurate answers grounded in your actual 
 
 ### Prerequisites
 
-- **Backend**: Python 3.8+, PostgreSQL with pgvector extension, OpenAI API key
+- **Backend**: Python 3.8+, PostgreSQL with pgvector extension, OpenAI API key, spaCy
 - **Frontend**: Node.js 18+, npm/yarn
 
 ### Installation
@@ -60,6 +70,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Install spaCy and language model
+python -m spacy download en_core_web_sm
 
 # Setup database
 python setup_database.py
@@ -128,8 +141,9 @@ backend/
 **RAG Pipeline:**
 
 1. **Document Ingestion**: Upload → Extract → Chunk → Embed → Store
-2. **Question Processing**: Question → Embedding → Similarity Search
-3. **Answer Generation**: Context + Question → LLM → Answer
+2. **Privacy Processing**: Anonymize sensitive data → Store mappings
+3. **Question Processing**: Question → Anonymize → Embedding → Similarity Search
+4. **Answer Generation**: Context + Question → LLM → Deanonymize → Answer
 
 ---
 
@@ -170,8 +184,11 @@ backend/
 
 ### API Endpoints
 
-- `POST /ingest` - Upload and process documents
-- `POST /ask` - Ask questions using RAG
+- `POST /ingest` - Upload and process documents (with privacy mode)
+- `POST /ask` - Ask questions using RAG (with anonymization)
+- `GET /files` - List all uploaded files
+- `DELETE /files/{id}` - Delete file and associated data
+- `GET /files/{id}/download` - Download original file
 - `GET /health` - Health check
 - `GET /stats` - Database statistics
 - `GET /docs` - Interactive API documentation
@@ -184,15 +201,16 @@ backend/
 # Health check
 curl http://localhost:8000/health
 
-# Upload document
+# Upload document with privacy mode
 curl -X POST http://localhost:8000/ingest \
   -F "file=@document.pdf" \
+  -F "anonymize=true" \
   -F "metadata={\"source\": \"test\"}"
 
-# Ask question
+# Ask question (automatically anonymized)
 curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "What is this about?"}'
+  -d '{"question": "What did John work on?"}'
 ```
 
 **Frontend:**

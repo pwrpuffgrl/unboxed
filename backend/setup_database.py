@@ -4,6 +4,11 @@ Database setup script for Unboxed RAG application
 This script helps you set up the PostgreSQL database with pgvector extension
 """
 
+
+"""
+connect to DB psql postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/unboxed
+"""
+
 import os
 import psycopg2
 import sys

@@ -1,13 +1,12 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-import logging
 
 import uvicorn
 
 # Import our organized modules
 
-from models.api_models import HealthResponse, IngestResponse, QuestionRequest, QuestionResponse, StatsResponse
+from models.api_models import HealthResponse, IngestResponse, QuestionRequest, QuestionResponse, StatsResponse, FilesResponse
 from config import config
 from constants import MESSAGES, DB_CONSTANTS, FILE_CONSTANTS
 
@@ -17,12 +16,14 @@ from services.chunk import chunk_text, sanitize_text
 from services.embedding import get_embedding
 from services.file_processor import FileProcessor
 from services.rag import create_rag_prompt, generate_rag_answer
+from services.spacy_anonymizer import SpacyAnonymizer
 
 
 
 # Initialize services
 file_processor = FileProcessor()
 db_service = DatabaseService()
+anonymizer = SpacyAnonymizer()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -72,12 +73,24 @@ async def root():
 async def ask_question(request: QuestionRequest):
     """Ask a question and get an answer based on ingested documents"""
     try:
-        # Get embedding for the question
-        question_embedding = get_embedding(request.question)
+        # Get all anonymization mappings from the database
+        all_mappings = db_service.get_all_anonymization_mappings()
+        
+        # Anonymize the question if we have mappings
+        original_question = request.question
+        anonymized_question = request.question
+        if all_mappings:
+            anonymized_question = anonymizer.anonymize_question(request.question, all_mappings)
+            print(f"🔒 Original question: '{original_question}'")
+            print(f"🔒 Anonymized question: '{anonymized_question}'")
+        
+        # Get embedding for the anonymized question
+        question_embedding = get_embedding(anonymized_question)
         if not question_embedding:
             raise HTTPException(status_code=500, detail=MESSAGES["EMBEDDING_ERROR"])
         
         # Search for similar chunks
+        print(f"🔍 Searching for chunks with embedding length: {len(question_embedding)}")
         similar_chunks = db_service.search_similar_chunks(
             question_embedding, 
             limit=request.context_limit or DB_CONSTANTS["DEFAULT_LIMIT"]
@@ -87,6 +100,8 @@ async def ask_question(request: QuestionRequest):
         if similar_chunks:
             print(f"First chunk similarity: {similar_chunks[0]['similarity']}")
             print(f"First chunk content preview: {similar_chunks[0]['content'][:100]}")
+        else:
+            print("❌ No similar chunks found - this might indicate an issue with the search")
 
         if not similar_chunks:
             return QuestionResponse(
@@ -95,14 +110,27 @@ async def ask_question(request: QuestionRequest):
                 confidence=0.0
             )
         
-        rag_prompt = create_rag_prompt(request.question, similar_chunks)
+        # Create RAG prompt with anonymized chunks (AI never sees sensitive data)
+        rag_prompt = create_rag_prompt(anonymized_question, similar_chunks)
         answer = generate_rag_answer(rag_prompt)
+        
+        # Store the original AI answer for debug purposes
+        anonymized_answer = answer
+        
+        # Deanonymize the answer to show original values to the user
+        if all_mappings:
+            original_answer = answer
+            print(f"🔓 Original AI answer (before deanonymization): '{original_answer}'")
+            answer = anonymizer.deanonymize_answer(answer, all_mappings)
+            print(f"🔓 Final answer (after deanonymization): '{answer}'")
+        
         most_relevant_chunk = similar_chunks[0]
         
         return QuestionResponse(
             answer=answer,
             sources=[f"{chunk['filename']} (similarity: {chunk['similarity']:.2f})" for chunk in similar_chunks],
-            confidence=most_relevant_chunk['similarity']
+            confidence=most_relevant_chunk['similarity'],
+            anonymized_answer=anonymized_answer if all_mappings else None
         )
         
     except Exception as e:
@@ -112,7 +140,8 @@ async def ask_question(request: QuestionRequest):
 @app.post("/ingest", response_model=IngestResponse)
 async def ingest_document(
     file: UploadFile = File(..., description="Document file to ingest"),
-    metadata: Optional[str] = Form(None, description="Optional metadata as JSON string")
+    metadata: Optional[str] = Form(None, description="Optional metadata as JSON string"),
+    anonymize: bool = Form(False, description="Whether to anonymize sensitive data")
 ):
     """Ingest a document for RAG processing"""
     try:
@@ -141,17 +170,48 @@ async def ingest_document(
                 detail=MESSAGES["PROCESSING_ERROR"].format(error=processed_file.get('error', 'Unknown error'))
             )
         
-        # Insert file metadata into database
+        # Anonymize text if requested
+        extracted_text = processed_file['text']
+        anonymization_mapping = None
+        anonymization_summary = None
+        
+        if anonymize:
+            print(f"🔒 Starting anonymization process for file: {processed_file['filename']}")
+            print(f"🔒 Original text length: {len(processed_file['text'])} characters")
+            print(f"🔒 Original text preview: {processed_file['text'][:200]}...")
+            
+            anonymizer.clear_mappings()  # Clear previous mappings
+            extracted_text, anonymization_mapping = anonymizer.anonymize_text(processed_file['text'])
+            anonymization_summary = anonymizer.get_mapping_summary()
+            
+            print(f"🔒 Anonymized {len(anonymization_mapping)} sensitive data points")
+            print(f"📊 Anonymization summary: {anonymization_summary}")
+            
+            # Print detailed anonymization mappings
+            if anonymization_mapping:
+                print(f"🔒 Detailed anonymization mappings:")
+                for original, alias in anonymization_mapping.items():
+                    print(f"   '{original}' → '{alias}'")
+            
+            print(f"🔒 Anonymized text length: {len(extracted_text)} characters")
+            print(f"🔒 Anonymized text preview: {extracted_text[:200]}...")
+        else:
+            print(f"📄 No anonymization requested for file: {processed_file['filename']}")
+        
+        # Insert file metadata and original file content into database
         file_id = db_service.insert_file_metadata(
             filename=processed_file['filename'],
             content_type=processed_file['content_type'],
             file_size=processed_file['file_size'],
             word_count=processed_file['word_count'],
+            original_file_bytes=file_content,  # Store the original file
+            anonymized=anonymize,
+            anonymization_mapping=anonymization_mapping if anonymization_mapping else None,
             metadata=metadata
         )
         
-        # Chunk the extracted text
-        text_chunks = chunk_text(processed_file['text'], FILE_CONSTANTS["DEFAULT_CHUNK_SIZE"])
+        # Chunk the extracted text (anonymized if requested)
+        text_chunks = chunk_text(extracted_text, FILE_CONSTANTS["DEFAULT_CHUNK_SIZE"])
 
         # DEBUG: Add these print statements
         print(f"Original text length: {len(processed_file['text'])}")
@@ -195,7 +255,9 @@ async def ingest_document(
             file_type=processed_file['content_type'],
             status="processed",
             chunks_processed=chunks_inserted,
-            word_count=processed_file['word_count']
+            word_count=processed_file['word_count'],
+            anonymized=anonymize,
+            anonymization_summary=anonymization_summary
         )
         
     except HTTPException:
@@ -212,6 +274,83 @@ async def get_stats():
         return StatsResponse(**stats)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
+
+# Files endpoint
+@app.get("/files", response_model=FilesResponse)
+async def get_files():
+    """Get all uploaded files"""
+    try:
+        files = db_service.get_all_files()
+        return FilesResponse(files=files)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting files: {str(e)}")
+
+# Document content endpoint
+@app.get("/files/{file_id}/content")
+async def get_file_content(file_id: int):
+    """Get the content of a specific file"""
+    try:
+        content = db_service.get_file_content(file_id)
+        if not content:
+            raise HTTPException(status_code=404, detail="File not found or no content available")
+        return {"content": content}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting file content: {str(e)}")
+
+# Delete file endpoint
+@app.delete("/files/{file_id}")
+async def delete_file(file_id: int):
+    """Delete a file and all its associated data"""
+    try:
+        # Delete the file and all its chunks
+        deleted = db_service.delete_file(file_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        return {"message": "File deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
+
+# Original file endpoint
+@app.get("/files/{file_id}/download")
+async def download_file(file_id: int):
+    """Download the original file"""
+    try:
+        print(f"📥 Download request for file ID: {file_id}")
+        
+        file_info = db_service.get_file_info(file_id)
+        if not file_info:
+            print(f"❌ File info not found for ID: {file_id}")
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        print(f"📄 File info: {file_info['filename']} ({file_info['content_type']})")
+        
+        # Get the original file content
+        original_file_bytes = db_service.get_original_file(file_id)
+        if not original_file_bytes:
+            print(f"❌ Original file bytes not found for ID: {file_id}")
+            raise HTTPException(status_code=404, detail="Original file not found")
+        
+        print(f"✅ File bytes retrieved: {len(original_file_bytes)} bytes")
+        
+        from fastapi.responses import Response
+        return Response(
+            content=original_file_bytes,
+            media_type=file_info['content_type'],
+            headers={
+                "Content-Disposition": f"inline; filename={file_info['filename']}",
+                "Content-Length": str(len(original_file_bytes))
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error downloading file {file_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error downloading file: {str(e)}")
 
 # API documentation endpoint
 @app.get("/docs")
